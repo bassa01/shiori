@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         db.prepare('UPDATE events SET order_index = ? WHERE id = ? AND itinerary_id = ?')
           .run(index, id, itineraryId);
       });
-    })();
+    });
     
     const events = db.prepare(`
       SELECT 

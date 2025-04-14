@@ -22,7 +22,8 @@ import { Event } from '../../lib/models';
 import EventItem from './EventItem';
 import EventModal from './EventModal';
 import { calculateTravelTime, TravelMode } from '../../lib/route-api';
-import { FaCheck, FaExclamationTriangle, FaTimes, FaRoute } from 'react-icons/fa';
+import { FaCheck, FaExclamationTriangle, FaTimes, FaRoute, FaPlus, FaMapMarkerAlt } from 'react-icons/fa';
+import { FiCalendar, FiClock, FiMapPin, FiPlus, FiList, FiMap, FiArrowDown, FiArrowUp } from 'react-icons/fi';
 
 interface EventListProps {
   events: Event[];
@@ -362,28 +363,42 @@ export default function EventList({ events, itineraryId, onReorder, onUpdate, on
   const { groups, sortedDates } = groupEventsByDate();
 
   return (
-    <div>
-      <div className="mb-4 flex justify-end">
-        <button
-          onClick={toggleTravelCheck}
-          className={`flex items-center px-4 py-2 rounded-md ${showTravelCheck ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-          disabled={isCheckingTravel}
-        >
-          {isCheckingTravel ? (
-            <>
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              移動時間チェック中...
-            </>
-          ) : (
-            <>
-              <FaRoute className="mr-2" />
-              {showTravelCheck ? '移動時間表示をオフ' : '移動時間をチェック'}
-            </>
-          )}
-        </button>
+    <div className="mb-8">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2 mb-1">
+            <FiList className="text-indigo-600" />
+            <span>イベント一覧</span>
+          </h2>
+          <p className="text-gray-500 text-sm">
+            ドラッグ＆ドロップでイベントの順序を変更できます
+          </p>
+        </div>
+        
+        <div className="flex gap-3 w-full md:w-auto">
+          <button 
+            className={`flex items-center px-4 py-2 rounded-lg text-sm shadow-sm transition-all duration-300 ${showTravelCheck 
+              ? 'bg-gradient-to-r from-indigo-600 to-indigo-700 text-white hover:shadow-md' 
+              : 'bg-white border border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+            onClick={toggleTravelCheck}
+            disabled={isCheckingTravel}
+          >
+            {isCheckingTravel ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>移動時間チェック中...</span>
+              </>
+            ) : (
+              <>
+                <FiMap className="mr-2" />
+                <span>{showTravelCheck ? '移動時間表示をオフ' : '移動時間をチェック'}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <DndContext 
@@ -399,8 +414,9 @@ export default function EventList({ events, itineraryId, onReorder, onUpdate, on
         >
           <div>
             {sortedDates.map((dateKey, dateIndex) => (
-              <div key={dateKey} className="mb-6">
-                <h3 className="text-lg font-semibold mb-3 bg-blue-50 p-2 rounded-md border-l-4 border-blue-500">
+              <div key={dateKey} className="mb-8">
+                <h3 className="text-lg font-semibold mb-4 bg-gradient-to-r from-indigo-50 to-purple-50 p-3 rounded-lg border-l-4 border-indigo-500 flex items-center gap-2 shadow-sm">
+                  <FiCalendar className="text-indigo-600" />
                   {formatDateHeader(dateKey, dateIndex)}
                 </h3>
                 <div className="relative">
@@ -428,12 +444,16 @@ export default function EventList({ events, itineraryId, onReorder, onUpdate, on
                         const travelTimeText = `${minutes}分`;
                         
                         return (
-                          <div key={connectionId} className="w-full flex justify-center my-2">
-                            <div className="flex items-center bg-white px-3 py-1 rounded-full border shadow-sm">
-                              <div className={`flex items-center justify-center w-6 h-6 rounded-full ${statusBg} mr-2`}>
+                          <div key={connectionId} className="w-full flex justify-center my-3">
+                            <div className="flex items-center bg-white px-4 py-2 rounded-full border shadow-md hover:shadow-lg transition-all duration-300 transform hover:scale-105">
+                              <div className={`flex items-center justify-center w-7 h-7 rounded-full ${statusBg} mr-3`}>
                                 {statusIcon}
                               </div>
-                              <span className="text-sm">{travelTimeText}</span>
+                              <div className="flex flex-col">
+                                <span className="text-sm font-medium">{travelTimeText}</span>
+                                <span className="text-xs text-gray-500">移動時間</span>
+                              </div>
+                              <FiArrowDown className="ml-3 text-gray-400" />
                             </div>
                           </div>
                         );
