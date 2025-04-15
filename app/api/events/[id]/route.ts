@@ -14,6 +14,8 @@ export async function GET(request: Request, { params }: { params: { id: string }
         title, 
         description, 
         location,
+        latitude,
+        longitude,
         event_date as eventDate,
         start_time as startTime, 
         end_time as endTime, 
@@ -57,7 +59,9 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     }
     
     const updates: string[] = [];
-    const queryParams: any[] = [];
+    // クエリパラメータの型を明示的に定義
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const queryParams: (string | number | null)[] = [];
     
     if (event.title !== undefined) {
       updates.push('title = ?');
@@ -72,6 +76,16 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     if (event.location !== undefined) {
       updates.push('location = ?');
       queryParams.push(event.location || null);
+    }
+    
+    if (event.latitude !== undefined) {
+      updates.push('latitude = ?');
+      queryParams.push(event.latitude || null);
+    }
+    
+    if (event.longitude !== undefined) {
+      updates.push('longitude = ?');
+      queryParams.push(event.longitude || null);
     }
     
     if (event.eventDate !== undefined) {
@@ -117,6 +131,8 @@ export async function PUT(request: Request, { params }: { params: { id: string }
         title, 
         description, 
         location,
+        latitude,
+        longitude,
         event_date as eventDate,
         start_time as startTime, 
         end_time as endTime, 

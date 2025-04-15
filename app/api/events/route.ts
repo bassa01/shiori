@@ -19,6 +19,8 @@ export async function GET(request: Request) {
         title, 
         description, 
         location,
+        latitude,
+        longitude,
         event_date as eventDate,
         start_time as startTime, 
         end_time as endTime, 
@@ -49,14 +51,16 @@ export async function POST(request: Request) {
     const id = nanoid();
     
     db.prepare(`
-      INSERT INTO events (id, itinerary_id, title, description, location, event_date, start_time, end_time, icon, link, order_index)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO events (id, itinerary_id, title, description, location, latitude, longitude, event_date, start_time, end_time, icon, link, order_index)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       event.itineraryId,
       event.title,
       event.description || null,
       event.location || null,
+      event.latitude || null,
+      event.longitude || null,
       event.eventDate || null,
       event.startTime || null,
       event.endTime || null,
@@ -72,6 +76,8 @@ export async function POST(request: Request) {
         title, 
         description, 
         location,
+        latitude,
+        longitude,
         event_date as eventDate,
         start_time as startTime, 
         end_time as endTime, 

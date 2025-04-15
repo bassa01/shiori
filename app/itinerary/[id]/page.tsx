@@ -1,26 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Layout from '../../components/Layout';
-import { useRouter } from 'next/navigation';
 import EventList from '../../components/EventList';
 import EventModal from '../../components/EventModal';
 import EditableTitle from '../../components/EditableTitle';
-import { Event } from '../../../lib/models';
-import { FaPlus, FaPencilAlt, FaTrash, FaFileExport, FaFileImport } from 'react-icons/fa';
+import PackingList from '../../components/PackingList';
+import BudgetManager from '../../components/BudgetManager';
+import { Event, Itinerary } from '../../../lib/models';
+import { FaPlus, FaPencilAlt, FaFileExport, FaFileImport, FaSuitcase, FaCalendarAlt, FaMoneyBillWave, FaMapMarkedAlt } from 'react-icons/fa';
 import Link from 'next/link';
 import { fetchItinerary, fetchEvents, reorderEvents, updateEvent, deleteEvent, createEvent, exportItinerary, importItinerary, updateItinerary } from '../../../lib/client-api';
 
 export const dynamic = 'force-dynamic';
 
 export default function ItineraryPage({ params }: { params: { id: string } }) {
-  const router = useRouter();
-  const [itinerary, setItinerary] = useState<any>(null);
+  const [itinerary, setItinerary] = useState<Itinerary | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [itineraryId, setItineraryId] = useState<string>('');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'events' | 'packing' | 'budget'>('events');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Next.js 15ではparamsを非同期に処理する必要がある
@@ -32,32 +33,38 @@ export default function ItineraryPage({ params }: { params: { id: string } }) {
     initParams();
   }, [params]);
 
+  const loadData = useCallback(async () => {
+    if (!itineraryId) return;
+    try {
+      setLoading(true);
+      const itineraryData = await fetchItinerary(itineraryId);
+      setItinerary(itineraryData);
+      
+      const eventsData = await fetchEvents(itineraryId);
+      setEvents(eventsData);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading data:', err);
+      setError('データの読み込み中にエラーが発生しました');
+    } finally {
+      setLoading(false);
+    }
+  }, [itineraryId]);
+
   useEffect(() => {
     // itineraryIdが設定された後にデータを読み込む
     if (!itineraryId) return;
 
-    const loadData = async () => {
-      try {
-        setLoading(true);
-        const itineraryData = await fetchItinerary(itineraryId);
-        setItinerary(itineraryData);
-        
-        const eventsData = await fetchEvents(itineraryId);
-        setEvents(eventsData);
-        setError(null);
-      } catch (err) {
-        console.error('Error loading data:', err);
-        setError('データの読み込み中にエラーが発生しました');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     loadData();
-  }, [itineraryId]);
+  }, [itineraryId, loadData]);
   
   const handleReorderEvents = async (reorderedEvents: Event[]) => {
     try {
+      if (!itinerary) {
+        setError('旅程情報が読み込まれていません');
+        return;
+      }
+      
       setLoading(true);
       const updatedEvents = await reorderEvents(itinerary.id, reorderedEvents.map(e => e.id));
       setEvents(updatedEvents);
@@ -142,6 +149,11 @@ export default function ItineraryPage({ params }: { params: { id: string } }) {
   // エクスポート処理
   const handleExport = async () => {
     try {
+      if (!itinerary) {
+        setError('旅程情報が読み込まれていません');
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -170,9 +182,11 @@ export default function ItineraryPage({ params }: { params: { id: string } }) {
   
   // インポート処理
   const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    
     try {
+      if (!e.target.files || e.target.files.length === 0) {
+        return;
+      }
+      
       setLoading(true);
       setError(null);
       
@@ -186,13 +200,17 @@ export default function ItineraryPage({ params }: { params: { id: string } }) {
           }
           
           const importData = JSON.parse(event.target.result);
-          const result = await importItinerary(importData);
+          await importItinerary(importData);
           
-          // インポート成功後、新しいしおりページに移動
-          router.push(`/itinerary/${result.id}`);
+          // 再読み込み
+          await loadData();
+          
+          setSuccessMessage('しおりをインポートしました');
+          setTimeout(() => setSuccessMessage(null), 3000);
         } catch (err) {
-          console.error('Error processing import file:', err);
-          setError('しおりのインポート中にエラーが発生しました');
+          console.error('Error parsing import data:', err);
+          setError('ファイルの解析に失敗しました。正しいフォーマットか確認してください。');
+        } finally {
           setLoading(false);
         }
       };
@@ -215,123 +233,159 @@ export default function ItineraryPage({ params }: { params: { id: string } }) {
     }
   };
   
-  if (loading && !itinerary) {
-    return (
-      <Layout>
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/4 mx-auto mb-4"></div>
-            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
-          </div>
-          <p className="mt-4 text-gray-600">読み込み中...</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  if (error || !itinerary) {
-    return (
-      <Layout>
-        <div className="max-w-4xl mx-auto text-center py-12">
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <p className="font-bold">エラーが発生しました</p>
-            <p className="text-sm">{error || 'しおりが見つかりませんでした'}</p>
-          </div>
-          <Link href="/" className="mt-6 inline-block text-blue-500 hover:text-blue-700">
-            ← ホームに戻る
-          </Link>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <Link href="/" className="text-blue-500 hover:text-blue-700 mb-2 inline-block">
-              ← ホームに戻る
-            </Link>
-            <EditableTitle 
-              title={itinerary.title} 
-              onSave={handleUpdateTitle}
-              titleClassName="text-2xl font-bold"
-            />
+      {loading && !itinerary ? (
+        <div className="flex items-center justify-center h-screen">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+        </div>
+      ) : error ? (
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">エラー: </strong>
+            <span className="block sm:inline">{error}</span>
           </div>
+        </div>
+      ) : !itinerary ? (
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">読み込み中: </strong>
+            <span className="block sm:inline">旅程情報を読み込んでいます...</span>
+          </div>
+        </div>
+      ) : (
+        <div className="container mx-auto px-4 py-8 max-w-6xl">
+          {successMessage && (
+            <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
+              <span className="block sm:inline">{successMessage}</span>
+            </div>
+          )}
+          
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center items-start space-y-4 sm:space-y-0 mb-6">
+          <EditableTitle 
+            title={itinerary?.title || ''} 
+            onSave={handleUpdateTitle} 
+          />
           
           <div className="flex space-x-2">
-            <form action={`/itinerary/${itinerary.id}/edit`} method="get">
-              <button
-                type="submit"
-                className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-md flex items-center"
-              >
+            <Link href={`/itinerary/${itinerary?.id}/map`}>
+              <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
+                <FaMapMarkedAlt className="mr-2" /> 地図表示
+              </button>
+            </Link>
+            <Link href={`/itinerary/${itinerary?.id}/edit`}>
+              <button className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-md flex items-center">
                 <FaPencilAlt className="mr-2" /> 編集
               </button>
-            </form>
-            
-            <button
+            </Link>
+            <button 
               onClick={handleExport}
-              className="bg-green-100 hover:bg-green-200 text-green-700 px-4 py-2 rounded-md flex items-center"
+              className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md flex items-center"
             >
               <FaFileExport className="mr-2" /> エクスポート
             </button>
-            
-            <label
-              htmlFor="import-file"
-              className="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-md flex items-center cursor-pointer"
+            <button 
+              onClick={() => fileInputRef.current?.click()}
+              className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-md flex items-center"
             >
               <FaFileImport className="mr-2" /> インポート
-              <input
-                id="import-file"
-                type="file"
-                accept=".json"
-                onChange={handleImportFile}
-                className="hidden"
-              />
-            </label>
-          </div>
-        </div>
-        
-        {loading && (
-          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <p>データを更新中...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <p>{error}</p>
-          </div>
-        )}
-        
-        {successMessage && (
-          <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <p>{successMessage}</p>
-          </div>
-        )}
-        
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">イベント</h2>
-            <AddEventButton itineraryId={itinerary.id} onAddEvent={handleCreateEvent} />
-          </div>
-          
-          {events.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <p>まだイベントがありません。「イベントを追加」ボタンをクリックして、最初のイベントを追加しましょう。</p>
-            </div>
-          ) : (
-            <EventList
-              events={events}
-              itineraryId={itinerary.id}
-              onReorder={handleReorderEvents}
-              onUpdate={handleUpdateEvent}
-              onDelete={handleDeleteEvent}
+            </button>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              onChange={handleImportFile} 
+              className="hidden" 
+              accept=".json"
             />
-          )}
+          </div>
         </div>
+        
+        <div className="mb-6 overflow-x-auto">
+          <ul className="flex text-sm font-medium text-center text-gray-500 border-b border-gray-200 whitespace-nowrap">
+            <li className="mr-2">
+              <button
+                className={`inline-flex items-center justify-center p-4 border-b-2 rounded-t-lg group ${
+                  activeTab === 'events'
+                    ? 'text-indigo-600 border-indigo-600 active'
+                    : 'border-transparent hover:text-gray-600 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('events')}
+              >
+                <FaCalendarAlt className={`w-4 h-4 mr-2 ${activeTab === 'events' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                イベント
+              </button>
+            </li>
+            <li className="mr-2">
+              <button
+                className={`inline-flex items-center justify-center p-4 border-b-2 rounded-t-lg group ${
+                  activeTab === 'packing'
+                    ? 'text-indigo-600 border-indigo-600 active'
+                    : 'border-transparent hover:text-gray-600 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('packing')}
+              >
+                <FaSuitcase className={`w-4 h-4 mr-2 ${activeTab === 'packing' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                持ち物リスト
+              </button>
+            </li>
+            <li className="mr-2">
+              <button
+                className={`inline-flex items-center justify-center p-4 border-b-2 rounded-t-lg group ${
+                  activeTab === 'budget'
+                    ? 'text-indigo-600 border-indigo-600 active'
+                    : 'border-transparent hover:text-gray-600 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab('budget')}
+              >
+                <FaMoneyBillWave className={`w-4 h-4 mr-2 ${activeTab === 'budget' ? 'text-indigo-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
+                予算管理
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        {/* イベントタブ */}
+        {activeTab === 'events' && (
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold flex items-center gap-2">
+                <FaCalendarAlt className="text-indigo-600" />
+                イベント
+              </h2>
+              <AddEventButton itineraryId={itinerary?.id || ''} onAddEvent={handleCreateEvent} />
+            </div>
+            
+            {events.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                <p>まだイベントがありません。「イベントを追加」ボタンをクリックして、最初のイベントを追加しましょう。</p>
+              </div>
+            ) : (
+              <EventList
+                events={events}
+                itineraryId={itinerary?.id || ''}
+                onReorder={handleReorderEvents}
+                onUpdate={handleUpdateEvent}
+                onDelete={handleDeleteEvent}
+              />
+            )}
+          </div>
+        )}
+
+        {/* 持ち物リストタブ */}
+        {activeTab === 'packing' && (
+          <PackingList itineraryId={itinerary?.id || ''} />
+        )}
+
+        {/* 予算管理タブ */}
+        {activeTab === 'budget' && (
+          <BudgetManager 
+            itineraryId={itinerary?.id || ''} 
+            initialTotalBudget={itinerary?.totalBudget || 0}
+            initialCurrency={itinerary?.currency || 'JPY'}
+          />
+        )}
       </div>
+      )}
     </Layout>
   );
 }

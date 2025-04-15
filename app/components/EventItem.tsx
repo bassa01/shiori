@@ -1,22 +1,32 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Event } from '../../lib/models';
+import { Event, Budget, BUDGET_CATEGORIES } from '../../lib/models';
+import { Reservation } from '../../lib/reservation-models';
 import { getIconById } from '../../lib/icons';
 import dayjs from 'dayjs';
 import Link from 'next/link';
-import { FaGripLines, FaPencilAlt, FaTrash, FaLink, FaClock, FaCheck, FaTimes, FaMapMarkerAlt } from 'react-icons/fa';
+import { FaGripLines, FaPencilAlt, FaTrash, FaLink, FaClock, FaCheck, FaTimes, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
+import { fetchBudgets, createBudget, updateBudget, deleteBudget } from '../../lib/client-api';
+import ReservationManager from './ReservationManager';
 
 interface EventItemProps {
   event: Event;
   onEdit: (event: Event) => void;
   onDelete: (id: string) => void;
+  itineraryId: string;
 }
 
-export default function EventItem({ event, onEdit, onDelete }: EventItemProps) {
+export default function EventItem({ event, onEdit, onDelete, itineraryId }: EventItemProps) {
   const [isEditingTime, setIsEditingTime] = useState(false);
+  const [isEditingBudget, setIsEditingBudget] = useState(false);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [eventBudget, setEventBudget] = useState<Budget | null>(null);
+  const [newBudgetAmount, setNewBudgetAmount] = useState<number>(0);
+  const [newBudgetCategory, setNewBudgetCategory] = useState<string>('transportation');
+  const [isLoadingBudget, setIsLoadingBudget] = useState(false);
   
   // 時間をHTML5の時間入力フォーマット（HH:MM）に変換する関数
   const convertToTimeInputFormat = (time?: string | number): string => {
@@ -44,12 +54,45 @@ export default function EventItem({ event, onEdit, onDelete }: EventItemProps) {
   // 初期値を設定
   const [startTime, setStartTime] = useState(convertToTimeInputFormat(event.startTime));
   const [endTime, setEndTime] = useState(convertToTimeInputFormat(event.endTime));
+  const [reservation, setReservation] = useState<Reservation | null>(null);
   
   // イベントが更新されたときに時間の状態も更新
-  React.useEffect(() => {
+  useEffect(() => {
     setStartTime(convertToTimeInputFormat(event.startTime));
     setEndTime(convertToTimeInputFormat(event.endTime));
   }, [event.startTime, event.endTime]);
+  
+  // 予約情報が変更されたときの処理
+  const handleReservationChange = (updatedReservation: Reservation | null) => {
+    setReservation(updatedReservation);
+  };
+  
+  // イベントに関連する予算を取得
+  useEffect(() => {
+    const loadEventBudget = async () => {
+      if (!event.id) return;
+      
+      setIsLoadingBudget(true);
+      try {
+        const budgetsData = await fetchBudgets(itineraryId);
+        setBudgets(budgetsData);
+        
+        // このイベントに関連する予算を探す
+        const eventBudgetData = budgetsData.find(b => b.eventId === event.id);
+        if (eventBudgetData) {
+          setEventBudget(eventBudgetData);
+          setNewBudgetAmount(eventBudgetData.amount);
+          setNewBudgetCategory(eventBudgetData.category);
+        }
+      } catch (error) {
+        console.error('Failed to load event budget:', error);
+      } finally {
+        setIsLoadingBudget(false);
+      }
+    };
+    
+    loadEventBudget();
+  }, [event.id, itineraryId]);
   
   const {
     attributes,
@@ -111,6 +154,130 @@ export default function EventItem({ event, onEdit, onDelete }: EventItemProps) {
     setIsEditingTime(false);
   };
   
+  // 予算の保存処理
+  const handleSaveBudget = async () => {
+    try {
+      if (eventBudget) {
+        // 既存の予算を更新
+        const updatedBudget = await updateBudget(eventBudget.id, {
+          amount: newBudgetAmount,
+          category: newBudgetCategory
+        });
+        setEventBudget(updatedBudget);
+      } else {
+        // 新しい予算を作成
+        const categoryName = BUDGET_CATEGORIES.find(c => c.id === newBudgetCategory)?.name || '予算';
+        const newBudget = await createBudget({
+          itineraryId,
+          eventId: event.id,
+          category: newBudgetCategory,
+          name: `${event.title} (${categoryName})`,
+          amount: newBudgetAmount,
+          orderIndex: budgets.length
+        });
+        setEventBudget(newBudget);
+      }
+      setIsEditingBudget(false);
+    } catch (error) {
+      console.error('Failed to save budget:', error);
+    }
+  };
+  
+  // 予算の削除処理
+  const handleDeleteBudget = async () => {
+    if (!eventBudget) return;
+    
+    try {
+      await deleteBudget(eventBudget.id);
+      setEventBudget(null);
+      setNewBudgetAmount(0);
+      setIsEditingBudget(false);
+    } catch (error) {
+      console.error('Failed to delete budget:', error);
+    }
+  };
+  
+  // 予算編集のキャンセル処理
+  const handleCancelBudgetEdit = () => {
+    if (eventBudget) {
+      setNewBudgetAmount(eventBudget.amount);
+      setNewBudgetCategory(eventBudget.category);
+    } else {
+      setNewBudgetAmount(0);
+      setNewBudgetCategory('transportation');
+    }
+    setIsEditingBudget(false);
+  };
+  
+  // 予算表示または編集フォーム
+  const budgetDisplay = isEditingBudget ? (
+    <div className="flex flex-col space-y-2 mt-2 p-2 bg-gray-50 rounded-md border border-gray-200">
+      <div className="flex items-center space-x-2">
+        <label className="text-sm text-gray-600">カテゴリ:</label>
+        <select
+          value={newBudgetCategory}
+          onChange={(e) => setNewBudgetCategory(e.target.value)}
+          className="border border-gray-300 rounded px-2 py-1 text-sm flex-grow"
+        >
+          {BUDGET_CATEGORIES.map(category => (
+            <option key={category.id} value={category.id}>{category.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center space-x-2">
+        <label className="text-sm text-gray-600">予算額:</label>
+        <input
+          type="number"
+          value={newBudgetAmount}
+          onChange={(e) => setNewBudgetAmount(Number(e.target.value))}
+          className="border border-gray-300 rounded px-2 py-1 text-sm w-24"
+          min="0"
+        />
+        <span className="text-sm text-gray-600">円</span>
+      </div>
+      <div className="flex justify-end space-x-2 mt-1">
+        {eventBudget && (
+          <button 
+            onClick={handleDeleteBudget}
+            className="text-red-500 hover:text-red-700 text-sm px-2 py-1"
+            title="削除"
+          >
+            削除
+          </button>
+        )}
+        <button 
+          onClick={handleCancelBudgetEdit}
+          className="text-gray-500 hover:text-gray-700 text-sm px-2 py-1"
+          title="キャンセル"
+        >
+          キャンセル
+        </button>
+        <button 
+          onClick={handleSaveBudget}
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-3 py-1 rounded"
+          title="保存"
+        >
+          保存
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div 
+      className="flex items-center text-sm text-gray-600 mt-1 cursor-pointer hover:text-blue-500" 
+      onClick={() => setIsEditingBudget(true)}
+    >
+      <FaMoneyBillWave className="mr-1" size={14} />
+      {eventBudget ? (
+        <span>
+          {new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }).format(eventBudget.amount)}
+          <span className="text-xs ml-1 text-gray-500">({BUDGET_CATEGORIES.find(c => c.id === eventBudget.category)?.name || eventBudget.category})</span>
+        </span>
+      ) : (
+        <span>予算を設定</span>
+      )}
+    </div>
+  );
+
   // 時間表示または編集フォーム
   const timeDisplay = isEditingTime ? (
     <div className="flex items-center space-x-2 mt-1">
@@ -208,6 +375,19 @@ export default function EventItem({ event, onEdit, onDelete }: EventItemProps) {
               </Link>
             </div>
           )}
+          
+          {/* 予算表示 */}
+          {budgetDisplay}
+          
+          {/* 予約情報 */}
+          <div className="mt-2">
+            <ReservationManager 
+              eventId={event.id} 
+              itineraryId={itineraryId} 
+              event={event}
+              onReservationChange={handleReservationChange}
+            />
+          </div>
         </div>
         
         <div className="flex space-x-2">

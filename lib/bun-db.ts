@@ -18,7 +18,9 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS itineraries (
     id TEXT PRIMARY KEY,
     title TEXT NOT NULL,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    totalBudget REAL,
+    currency TEXT DEFAULT 'JPY'
   );
 
   CREATE TABLE IF NOT EXISTS events (
@@ -33,6 +35,67 @@ db.exec(`
     icon TEXT,
     link TEXT,
     order_index INTEGER NOT NULL,
+    FOREIGN KEY (itinerary_id) REFERENCES itineraries(id) ON DELETE CASCADE
+  );
+  
+  CREATE TABLE IF NOT EXISTS packing_items (
+    id TEXT PRIMARY KEY,
+    itinerary_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    is_packed BOOLEAN NOT NULL DEFAULT 0,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    notes TEXT,
+    is_essential BOOLEAN NOT NULL DEFAULT 0,
+    order_index INTEGER NOT NULL,
+    FOREIGN KEY (itinerary_id) REFERENCES itineraries(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS budgets (
+    id TEXT PRIMARY KEY,
+    itinerary_id TEXT NOT NULL,
+    category TEXT NOT NULL,
+    name TEXT NOT NULL,
+    amount REAL NOT NULL,
+    notes TEXT,
+    event_id TEXT,
+    order_index INTEGER NOT NULL,
+    FOREIGN KEY (itinerary_id) REFERENCES itineraries(id) ON DELETE CASCADE,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS expenses (
+    id TEXT PRIMARY KEY,
+    budget_id TEXT NOT NULL,
+    itinerary_id TEXT NOT NULL,
+    date TEXT NOT NULL,
+    amount REAL NOT NULL,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    payment_method TEXT,
+    receipt_image TEXT,
+    created_at INTEGER NOT NULL,
+    FOREIGN KEY (budget_id) REFERENCES budgets(id) ON DELETE CASCADE,
+    FOREIGN KEY (itinerary_id) REFERENCES itineraries(id) ON DELETE CASCADE
+  );
+  
+  CREATE TABLE IF NOT EXISTS reservations (
+    id TEXT PRIMARY KEY,
+    event_id TEXT NOT NULL,
+    itinerary_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'notBooked',
+    confirmation_number TEXT,
+    provider TEXT,
+    booking_date TEXT,
+    price REAL,
+    currency TEXT,
+    notes TEXT,
+    contact_info TEXT,
+    attachment_urls TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (itinerary_id) REFERENCES itineraries(id) ON DELETE CASCADE
   );
 `);

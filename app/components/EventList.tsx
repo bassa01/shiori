@@ -468,6 +468,7 @@ export default function EventList({ events, itineraryId, onReorder, onUpdate, on
                         event={event} 
                         onEdit={handleEdit}
                         onDelete={onDelete}
+                        itineraryId={itineraryId}
                       />
                     </div>
                   ))}

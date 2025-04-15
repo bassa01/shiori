@@ -1,18 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import db from '../../../../lib/db';
 
 // GET /api/itineraries/[id] - 特定のしおりを取得
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     // Next.js 15ではparamsをawaitする必要がある
     const routeParams = await params;
     const { id } = routeParams;
-    const row = db.prepare('SELECT id, title, created_at as createdAt FROM itineraries WHERE id = ?').get(id);
+    console.log('Fetching itinerary with ID:', id);
+    
+    // Explicitly select all fields including totalBudget and currency
+    const row = db.prepare('SELECT id, title, created_at as createdAt, totalBudget, currency FROM itineraries WHERE id = ?').get(id);
     
     if (!row) {
+      console.log('Itinerary not found:', id);
       return NextResponse.json({ error: 'Itinerary not found' }, { status: 404 });
     }
     
+    console.log('Found itinerary:', row);
     return NextResponse.json(row);
   } catch (error) {
     console.error('Error fetching itinerary:', error);

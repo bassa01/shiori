@@ -3,7 +3,8 @@
 import React, { useState } from 'react';
 import { Event } from '../../lib/models';
 import { icons, IconOption } from '../../lib/icons';
-import { FaTimes, FaCar, FaWalking, FaBicycle, FaBus, FaSpinner, FaArrowRight, FaMapMarkerAlt, FaCalculator } from 'react-icons/fa';
+import { FaTimes, FaCar, FaWalking, FaBicycle, FaBus, FaSpinner, FaCalculator } from 'react-icons/fa';
+import AddressSearch from './AddressSearch';
 import { TravelMode, calculateTravelTime } from '../../lib/route-api';
 
 interface EventModalProps {
@@ -17,6 +18,8 @@ export default function EventModal({ event, itineraryId, onSave, onCancel }: Eve
   const [title, setTitle] = useState(event?.title || '');
   const [description, setDescription] = useState(event?.description || '');
   const [location, setLocation] = useState(event?.location || '');
+  const [latitude, setLatitude] = useState<number | null | undefined>(event?.latitude);
+  const [longitude, setLongitude] = useState<number | null | undefined>(event?.longitude);
   
   // 移動時間計算関連の状態
   const [showTravelCalculator, setShowTravelCalculator] = useState(false);
@@ -108,6 +111,8 @@ export default function EventModal({ event, itineraryId, onSave, onCancel }: Eve
       title,
       description: description || undefined,
       location: location || undefined,
+      latitude: latitude === undefined ? null : latitude,
+      longitude: longitude === undefined ? null : longitude,
       eventDate: eventDate || undefined,
       startTime: timeToTimestamp(startTime),
       endTime: timeToTimestamp(endTime),
@@ -177,81 +182,101 @@ export default function EventModal({ event, itineraryId, onSave, onCancel }: Eve
                 {showTravelCalculator ? '移動時間計算を閉じる' : '移動時間を計算'}
               </button>
             </div>
-            <input
-              type="text"
-              id="location"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="東京都新宿区西新宿2-8-1"
+            <AddressSearch
+              initialValue={location}
+              onLocationSelect={(newLocation: string, lat: number, lon: number) => {
+                setLocation(newLocation);
+                setLatitude(lat);
+                setLongitude(lon);
+              }}
+              label="場所"
+              placeholder="場所名を入力して検索（例: 東京タワー）"
             />
+            
+            {/* 移動時間計算ボタン */}
+            {location && (
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowTravelCalculator(!showTravelCalculator)}
+                  className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                >
+                  <FaCalculator className="mr-1" />
+                  {showTravelCalculator ? '移動時間計算を閉じる' : '移動時間を計算'}
+                </button>
+              </div>
+            )}
           </div>
 
           {showTravelCalculator && (
-            <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-              <h3 className="text-md font-medium mb-3 flex items-center">
-                <FaMapMarkerAlt className="mr-2 text-red-500" />
-                移動時間計算
+            <div className="mb-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                <FaCalculator className="mr-2" /> 移動時間計算
               </h3>
               
               <div className="mb-3">
-                <label htmlFor="originLocation" className="block text-sm font-medium text-gray-700 mb-1">
-                  出発地の住所
-                </label>
-                <input
-                  type="text"
-                  id="originLocation"
-                  value={originLocation}
-                  onChange={(e) => setOriginLocation(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="東京都渋谷区渋谷2-21-1"
+                <AddressSearch
+                  initialValue={originLocation}
+                  onLocationSelect={(address: string) => setOriginLocation(address)}
+                  label="出発地"
+                  placeholder="出発地を入力して検索（例: 自宅）"
                 />
               </div>
               
               <div className="mb-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm text-gray-600 mb-1">
+                  目的地
+                </label>
+                <div className="px-3 py-2 border border-gray-300 bg-white rounded-md text-gray-700">
+                  {location || '未設定'}
+                </div>
+              </div>
+              
+              <div className="mb-3">
+                <label className="block text-sm text-gray-600 mb-1">
                   移動手段
                 </label>
                 <div className="flex space-x-2">
                   <button
                     type="button"
+                    className={`p-2 rounded-md flex items-center justify-center ${travelMode === TravelMode.driving ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
                     onClick={() => setTravelMode(TravelMode.driving)}
-                    className={`flex items-center justify-center px-3 py-2 rounded ${travelMode === TravelMode.driving ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                    title="車"
                   >
-                    <FaCar className="mr-1" /> 車
+                    <FaCar size={16} />
                   </button>
                   <button
                     type="button"
+                    className={`p-2 rounded-md flex items-center justify-center ${travelMode === TravelMode.walking ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
                     onClick={() => setTravelMode(TravelMode.walking)}
-                    className={`flex items-center justify-center px-3 py-2 rounded ${travelMode === TravelMode.walking ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                    title="徒歩"
                   >
-                    <FaWalking className="mr-1" /> 徒歩
+                    <FaWalking size={16} />
                   </button>
                   <button
                     type="button"
+                    className={`p-2 rounded-md flex items-center justify-center ${travelMode === TravelMode.cycling ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
                     onClick={() => setTravelMode(TravelMode.cycling)}
-                    className={`flex items-center justify-center px-3 py-2 rounded ${travelMode === TravelMode.cycling ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                    title="自転車"
                   >
-                    <FaBicycle className="mr-1" /> 自転車
+                    <FaBicycle size={16} />
                   </button>
                   <button
                     type="button"
+                    className={`p-2 rounded-md flex items-center justify-center ${travelMode === TravelMode.transit ? 'bg-blue-100 text-blue-600 border-2 border-blue-500' : 'bg-gray-50 text-gray-700 hover:bg-gray-100 border border-gray-200'}`}
                     onClick={() => setTravelMode(TravelMode.transit)}
-                    className={`flex items-center justify-center px-3 py-2 rounded ${travelMode === TravelMode.transit ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}
+                    title="公共交通機関"
                   >
-                    <FaBus className="mr-1" /> 公共交通
+                    <FaBus size={16} />
                   </button>
                 </div>
               </div>
               
-              <div className="mt-4">
+              <div className="flex justify-between items-center">
                 <button
                   type="button"
                   onClick={async () => {
-                    if (!originLocation || !location) {
-                      setTravelError('出発地と目的地の両方を入力してください');
-                      return;
-                    }
+                    if (!originLocation || !location) return;
                     
                     setCalculatingTravel(true);
                     setTravelError(null);
@@ -259,70 +284,36 @@ export default function EventModal({ event, itineraryId, onSave, onCancel }: Eve
                     try {
                       const result = await calculateTravelTime(originLocation, location, travelMode);
                       setTravelTimeResult(result);
-                    } catch (error: any) {
-                      setTravelError(error.message || '移動時間の計算に失敗しました');
-                      setTravelTimeResult(null);
+                    } catch (error) {
+                      console.error('Travel calculation error:', error);
+                      setTravelError('移動時間の計算に失敗しました。住所を確認してください。');
                     } finally {
                       setCalculatingTravel(false);
                     }
                   }}
-                  className="w-full flex items-center justify-center px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 disabled:bg-blue-300"
-                  disabled={calculatingTravel || !originLocation || !location}
+                  className="px-3 py-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!originLocation || !location || calculatingTravel}
                 >
                   {calculatingTravel ? (
                     <>
-                      <FaSpinner className="animate-spin mr-2" />
+                      <FaSpinner className="animate-spin mr-1" />
                       計算中...
                     </>
                   ) : (
-                    '移動時間を計算'
+                    <>計算</>  
                   )}
                 </button>
+                
+                {travelTimeResult && (
+                  <div className="text-sm">
+                    <div className="font-medium">{travelTimeResult.durationText}</div>
+                    <div className="text-gray-500">{travelTimeResult.distanceText}</div>
+                  </div>
+                )}
               </div>
               
               {travelError && (
-                <div className="mt-3 p-2 bg-red-50 text-red-700 rounded border border-red-200 text-sm">
-                  {travelError}
-                </div>
-              )}
-              
-              {travelTimeResult && (
-                <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
-                  <div className="flex items-start mb-2">
-                    <div className="mr-2 text-green-600">
-                      <FaMapMarkerAlt />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{originLocation}</div>
-                      <div className="text-xs text-gray-500">出発地</div>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-center my-2 text-gray-400">
-                    <FaArrowRight />
-                  </div>
-                  
-                  <div className="flex items-start mb-3">
-                    <div className="mr-2 text-red-600">
-                      <FaMapMarkerAlt />
-                    </div>
-                    <div>
-                      <div className="text-sm font-medium">{location}</div>
-                      <div className="text-xs text-gray-500">目的地</div>
-                    </div>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2 text-center">
-                    <div className="p-2 bg-white rounded border border-gray-100">
-                      <div className="text-lg font-bold text-blue-600">{travelTimeResult.durationText}</div>
-                      <div className="text-xs text-gray-500">所要時間</div>
-                    </div>
-                    <div className="p-2 bg-white rounded border border-gray-100">
-                      <div className="text-lg font-bold text-blue-600">{travelTimeResult.distanceText}</div>
-                      <div className="text-xs text-gray-500">距離</div>
-                    </div>
-                  </div>
-                </div>
+                <div className="mt-2 text-sm text-red-600">{travelError}</div>
               )}
             </div>
           )}
