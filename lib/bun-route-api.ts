@@ -43,9 +43,11 @@ export async function calculateTravelTime(
       distanceText: data.distanceText,
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('移動時間の計算中にエラーが発生しました:', error);
-    // エラーオブジェクトをそのままスローするか、カスタムエラーをスローする
-    throw new Error(error.message || '移動時間の計算に失敗しました');
+    if (error instanceof Error && error.message) {
+      throw new Error(error.message);
+    }
+    throw new Error('移動時間の計算に失敗しました');
   }
 }

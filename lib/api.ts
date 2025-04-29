@@ -105,7 +105,7 @@ export function updateEvent(id: string, event: Partial<Omit<Event, 'id' | 'itine
   if (!current) return null;
   
   const updates: string[] = [];
-  const params: any[] = [];
+  const params: unknown[] = [];
   
   if (event.title !== undefined) {
     updates.push('title = ?');
@@ -156,14 +156,12 @@ export function deleteEvent(id: string): void {
 }
 
 export function reorderEvents(itineraryId: string, eventIds: string[]): Event[] {
-  const transaction = db.transaction(() => {
+  db.transaction(() => {
     eventIds.forEach((id, index) => {
       db.prepare('UPDATE events SET order_index = ? WHERE id = ? AND itinerary_id = ?')
         .run(index, id, itineraryId);
     });
   });
-  
-  transaction();
-  
+
   return getEvents(itineraryId);
 }

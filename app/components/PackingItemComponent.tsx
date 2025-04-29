@@ -50,7 +50,7 @@ export default function PackingItemComponent({
       await updatePackingItem(item.id, {
         name: editedName.trim(),
         quantity: editedQuantity,
-        notes: editedNotes.trim() || null
+        notes: editedNotes.trim() || undefined
       });
       setIsEditing(false);
     } catch (error) {

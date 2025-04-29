@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
         db.prepare('UPDATE packing_items SET order_index = ? WHERE id = ? AND itinerary_id = ?')
           .run(index, id, itineraryId);
       });
-    })();
+    });
 
     // Get the updated items
     const updatedItems = db.prepare(`

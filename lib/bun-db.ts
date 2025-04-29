@@ -111,14 +111,14 @@ const wrapperDb = {
   prepare: (sql: string) => {
     const stmt = db.prepare(sql);
     return {
-      run: (...params: any[]) => stmt.run(...params),
-      get: (...params: any[]) => stmt.get(...params),
-      all: (...params: any[]) => stmt.all(...params),
+      run: (...params: unknown[]) => stmt.run(...params),
+      get: (...params: unknown[]) => stmt.get(...params),
+      all: (...params: unknown[]) => stmt.all(...params),
     };
   },
   exec: (sql: string) => db.exec(sql),
   // Add transaction support
-  transaction: (fn: Function) => {
+  transaction<T>(fn: () => T): T {
     db.exec('BEGIN TRANSACTION;');
     try {
       const result = fn();
@@ -129,6 +129,7 @@ const wrapperDb = {
       throw error;
     }
   }
+
 };
 
 export default wrapperDb;

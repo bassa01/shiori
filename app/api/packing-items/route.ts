@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
 import db from '../../../lib/db';
-import { PackingItem } from '../../../lib/models';
+import { nanoid } from 'nanoid';
 
 // GET /api/packing-items?itineraryId=xxx
 export async function GET(request: NextRequest) {
@@ -68,7 +67,7 @@ export async function POST(request: NextRequest) {
       ? maxOrderResult.maxOrder + 1 
       : 0;
 
-    const id = uuidv4();
+    const id = nanoid();
     
     // Insert new packing item
     db.prepare(`

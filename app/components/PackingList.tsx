@@ -20,7 +20,6 @@ import { PackingItem, PACKING_CATEGORIES } from '../../lib/models';
 import { 
   fetchPackingItems, 
   createPackingItem, 
-  updatePackingItem, 
   deletePackingItem, 
   reorderPackingItems, 
   togglePackedStatus 

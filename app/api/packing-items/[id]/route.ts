@@ -53,8 +53,8 @@ export async function PUT(
     }
 
     // Build the update query dynamically based on provided fields
-    let updateFields = [];
-    let updateValues = [];
+    const updateFields = [];
+    const updateValues = [];
 
     if (name !== undefined) {
       updateFields.push('name = ?');

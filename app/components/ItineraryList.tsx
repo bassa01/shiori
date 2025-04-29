@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { FaCalendarAlt, FaTrash, FaExclamationTriangle, FaEdit, FaEye } from 'react-icons/fa';
-import { FiCalendar, FiClock, FiMapPin, FiPlus, FiSearch } from 'react-icons/fi';
+import { FaTrash, FaExclamationTriangle, FaEdit, FaEye } from 'react-icons/fa';
+import { FiCalendar, FiClock, FiPlus, FiSearch } from 'react-icons/fi';
 import dayjs from 'dayjs';
 import { deleteItinerary } from '../../lib/client-api';
 

@@ -6,7 +6,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { Event, Budget, BUDGET_CATEGORIES } from '../../lib/models';
 import { Reservation } from '../../lib/reservation-models';
 import { getIconById } from '../../lib/icons';
-import dayjs from 'dayjs';
 import Link from 'next/link';
 import { FaGripLines, FaPencilAlt, FaTrash, FaLink, FaClock, FaCheck, FaTimes, FaMapMarkerAlt, FaMoneyBillWave } from 'react-icons/fa';
 import { fetchBudgets, createBudget, updateBudget, deleteBudget } from '../../lib/client-api';

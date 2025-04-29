@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
+import { nanoid } from 'nanoid';
 import db from '../../../lib/db';
-import { Expense } from '../../../lib/models';
 
 // GET /api/expenses?itineraryId=xxx&budgetId=yyy
 export async function GET(request: NextRequest) {
@@ -80,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Budget not found' }, { status: 404 });
     }
 
-    const id = uuidv4();
+    const id = nanoid();
     const createdAt = Date.now();
     
     // Insert new expense

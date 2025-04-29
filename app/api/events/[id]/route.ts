@@ -60,7 +60,7 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     
     const updates: string[] = [];
     // クエリパラメータの型を明示的に定義
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const queryParams: (string | number | null)[] = [];
     
     if (event.title !== undefined) {

@@ -1,8 +1,5 @@
 import React from 'react';
 import Layout from './components/Layout';
-import Link from 'next/link';
-import { FaCalendarAlt } from 'react-icons/fa';
-import dayjs from 'dayjs';
 import HomeClientActions from './components/HomeClientActions';
 import ItineraryList from './components/ItineraryList';
 

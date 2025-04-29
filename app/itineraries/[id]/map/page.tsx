@@ -104,7 +104,7 @@ export default function MapPage() {
         </div>
       ) : (
         <>
-          <MapView events={events} itineraryId={itineraryId} />
+          <MapView events={events} />
           
           <div className="mt-6 bg-blue-50 rounded-lg p-4 text-sm">
             <h3 className="font-bold text-blue-700 mb-2">地図の使い方</h3>

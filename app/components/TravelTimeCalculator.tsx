@@ -2,8 +2,7 @@
 
 import React, { useState } from 'react';
 import { TravelMode } from '../../lib/route-api';
-import { FaCar, FaWalking, FaBicycle, FaBus, FaSpinner, FaArrowRight, FaMapMarkedAlt } from 'react-icons/fa';
-import { calculateTravelTime } from '../../lib/client-api';
+import { FaCar, FaWalking, FaBicycle, FaBus, FaSpinner, FaArrowRight } from 'react-icons/fa';
 
 interface TravelTimeResult {
   duration: number;

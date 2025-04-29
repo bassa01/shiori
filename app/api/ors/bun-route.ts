@@ -12,7 +12,7 @@ enum TravelMode {
 /**
  * 住所から座標を取得する（国土地理院API使用）- Bun最適化版
  */
-async function geocodeAddress(address: string, apiKey: string): Promise<[number, number]> {
+async function geocodeAddress(address: string): Promise<[number, number]> {
   try {
     console.log(`ジオコーディング実行: 住所="${address}"`);
     
@@ -41,9 +41,12 @@ async function geocodeAddress(address: string, apiKey: string): Promise<[number,
     
     // OpenRouteServiceも[経度, 緯度]の形式を使用するのでそのまま返す
     return coordinates as [number, number];
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('ジオコーディングエラー:', error);
-    throw new Error(`住所のジオコーディングに失敗しました: ${error.message || '不明なエラー'}`);
+    if (error instanceof Error && error.message) {
+      throw new Error(`住所のジオコーディングに失敗しました: ${error.message}`);
+    }
+    throw new Error('住所のジオコーディングに失敗しました: 不明なエラー');
   }
 }
 
@@ -90,8 +93,8 @@ export async function POST(request: NextRequest) {
     }
 
     // 座標を取得 - Bunの最適化されたfetchを使用
-    const originCoords = await geocodeAddress(origin, apiKey);
-    const destCoords = await geocodeAddress(destination, apiKey);
+    const originCoords = await geocodeAddress(origin);
+    const destCoords = await geocodeAddress(destination);
 
     // ルート検索 - Bunの最適化
     const directions = new OpenRouteService.Directions({ api_key: apiKey });
@@ -118,8 +121,11 @@ export async function POST(request: NextRequest) {
       durationText: formatDuration(duration),
       distanceText: formatDistance(distance)
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('ORS APIルートエラー:', error);
-    return NextResponse.json({ error: error.message || '計算中にエラーが発生しました' }, { status: 500 });
+    if (error instanceof Error && error.message) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    return NextResponse.json({ error: '計算中にエラーが発生しました' }, { status: 500 });
   }
 }

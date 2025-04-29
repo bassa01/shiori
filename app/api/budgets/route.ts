@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v4 as uuidv4 } from 'uuid';
 import db from '../../../lib/db';
-import { Budget } from '../../../lib/models';
+import { nanoid } from 'nanoid';
 
 // GET /api/budgets?itineraryId=xxx
 export async function GET(request: NextRequest) {
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
       ? maxOrderResult.maxOrder + 1 
       : 0;
 
-    const id = uuidv4();
+    const id = nanoid();
     
     // Insert new budget
     db.prepare(`
